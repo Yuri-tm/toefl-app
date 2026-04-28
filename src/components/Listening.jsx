@@ -3,7 +3,7 @@ import useTimer from "../hooks/useTimer";
 
 export default function Listening({ onComplete }) {
     const [playing, setPlaying] = useState(false);
-    const [answers, setAnswers] = useState({});
+    const [answers] = useState({});
 
     // ⏱ 8 minutes total (like mini test)
     const time = useTimer(480, submit);

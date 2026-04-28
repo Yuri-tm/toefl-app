@@ -2,7 +2,7 @@ import { useState } from "react";
 import useTimer from "../hooks/useTimer";
 
 export default function Reading({ onComplete }) {
-    const [answers, setAnswers] = useState({});
+    const [answers] = useState({});
     const time = useTimer(480, submit); // 8 min
 
     function submit() {

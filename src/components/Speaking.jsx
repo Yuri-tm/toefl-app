@@ -1,35 +1,29 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback, useReducer } from "react";
 import { evaluateSpeaking } from "../utils/api";
 
+const phaseReducer = (state, action) => {
+    switch (action.type) {
+        case "START_RECORDING":
+            return { phase: "speak", time: 45 };
+        case "STOP_RECORDING":
+            return { phase: "done", time: state.time };
+        case "TICK":
+            return { ...state, time: state.time - 1 };
+        default:
+            return state;
+    }
+};
+
 export default function Speaking({ onComplete }) {
-    const [phase, setPhase] = useState("prep"); // prep → speak → done
-    const [time, setTime] = useState(15);
+    const [{ phase, time }, dispatch] = useReducer(phaseReducer, {
+        phase: "prep",
+        time: 15,
+    });
     const [transcript, setTranscript] = useState("");
-    const [recording, setRecording] = useState(false);
 
     const recognitionRef = useRef(null);
 
-    // ⏱ Phase-based timer
-    useEffect(() => {
-        if (phase === "done") return;
-
-        if (time <= 0) {
-            if (phase === "prep") {
-                startRecording();
-                setPhase("speak");
-                setTime(45);
-            } else if (phase === "speak") {
-                stopRecording();
-                setPhase("done");
-            }
-            return;
-        }
-
-        const timer = setTimeout(() => setTime((t) => t - 1), 1000);
-        return () => clearTimeout(timer);
-    }, [time, phase]);
-
-    function startRecording() {
+    const startRecording = useCallback(() => {
         const SR =
             window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -52,14 +46,12 @@ export default function Speaking({ onComplete }) {
 
         rec.start();
         recognitionRef.current = rec;
-        setRecording(true);
-    }
+    }, []);
 
-    async function stopRecording() {
+    const stopRecording = useCallback(async () => {
         if (recognitionRef.current) {
             recognitionRef.current.stop();
         }
-        setRecording(false);
 
         const result = await evaluateSpeaking(transcript);
 
@@ -67,7 +59,30 @@ export default function Speaking({ onComplete }) {
             speaking: result.toeflScore,
             speakingDetails: result,
         });
-    }
+    }, [transcript, onComplete]);
+
+    // ⏱ Timer countdown
+    useEffect(() => {
+        if (phase === "done") return;
+
+        const timer = setTimeout(() => dispatch({ type: "TICK" }), 1000);
+        return () => clearTimeout(timer);
+    }, [phase]);
+
+    // ⏱ Handle phase transitions
+    useEffect(() => {
+        if (phase === "done" || time > 0) return;
+
+        if (phase === "prep") {
+            startRecording();
+            dispatch({ type: "START_RECORDING" });
+        } else if (phase === "speak") {
+            stopRecording();
+            dispatch({ type: "STOP_RECORDING" });
+        }
+    }, [time, phase, startRecording, stopRecording]);
+
+
 
     return (
         <div>
@@ -87,5 +102,5 @@ export default function Speaking({ onComplete }) {
             </h3>
         </div>
     );
-    
+
 }
