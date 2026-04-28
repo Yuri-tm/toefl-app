@@ -3,7 +3,9 @@ import axios from "axios";
 import cors from "cors";
 
 const app = express();
-app.use(cors());
+app.use(cors({
+    origin: "https://toefl-app-gray.vercel.app/"
+}));
 app.use(express.json());
 
 app.post("/api/evaluate-speaking", async (req, res) => {
